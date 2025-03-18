@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Unicode Table</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            padding: 20px;
+        }
+        table {
+            border-collapse: collapse;
+            width: 960px; /* 横幅固定 */
+            margin-top: 20px;
+            table-layout: fixed; /* セル幅を固定 */
+        }
+        table, th, td {
+            border: 1px solid #ccc;
+        }
+        th, td {
+            padding: 10px;
+            text-align: center;
+            width: 60px; /* 横幅固定 */
+            height: 60px; /* 高さ固定 */
+            word-wrap: break-word; /* 文字が長くても折り返す */
+            text-overflow: ellipsis; /* 文字が長い場合、表示しきれない部分を省略 */
+            overflow: hidden;
+        }
+        th {
+            background-color: #f0f0f0;
+        }
+        .unicode-item {
+            cursor: pointer;
+        }
+        .unicode-item:hover {
+            background-color: #e9ecef;
+        }
+        .highlight {
+            background-color: pink;
+        }
+        .button-container {
+            margin-top: 20px;
+            text-align: center;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            margin: 0 10px;
+        }
+        .search-container {
+            margin-top: 20px;
+            display: flex;
+            justify-content: center;
+        }
+        #search-box {
+            padding: 10px;
+            font-size: 16px;
+            width: 80%;
+        }
+        #search-button {
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        .floating-notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background-color: #28a745;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 5px;
+            font-size: 16px;
+            display: none;
+            z-index: 1000;
+        }
+    </style>
+</head>
+<body>
+
+    <h2>全ユニコード表</h2>
+    
+    <div class="search-container">
+        <input type="text" id="search-box" placeholder="ユニコードを検索（例: U+0041）">
+    </div>
+
+    <table id="unicode-table">
+        <thead>
+            <tr>
+                <th> </th> <!-- 空のセル for 左上のヘッダー -->
+                <th>0</th>
+                <th>1</th>
+                <th>2</th>
+                <th>3</th>
+                <th>4</th>
+                <th>5</th>
+                <th>6</th>
+                <th>7</th>
+                <th>8</th>
+                <th>9</th>
+                <th>A</th>
+                <th>B</th>
+                <th>C</th>
+                <th>D</th>
+                <th>E</th>
+                <th>F</th>
+            </tr>
+        </thead>
+        <tbody id="unicode-table-body"></tbody>
+    </table>
+
+    <div class="button-container">
+        <button id="prev-button">戻る</button>
+        <button id="next-button">次へ</button>
+    </div>
+
+    <div id="floating-notification" class="floating-notification"></div>
+
+    <script>
+        const unicodeRangeStart = 0x000000;
+        const unicodeRangeEnd = 0x10FFFF;
+        const pageSize = 256; // 1回に表示するユニコード数（16x16 = 256）
+        let currentStart = unicodeRangeStart;
+        let lastCopiedText = ''; // コピーされた文字を追跡するための変数
+
+        // ユニコードのテーブルを動的に生成して表示
+        function generateUnicodeTable(start) {
+            const tbody = document.getElementById('unicode-table-body');
+            tbody.innerHTML = ''; // 前回の内容を消去
+
+            // 縦列（000000, 000010, 000020, ...）表示
+            for (let row = 0; row < 16; row++) {
+                const tr = document.createElement('tr');
+
+                // 縦列の6桁表示（000000, 000010, 000020, ...）
+                const th = document.createElement('th');
+                th.textContent = (start + (row * 16)).toString(16).toUpperCase().padStart(6, '0');
+                tr.appendChild(th);
+
+                // 横列（0, 1, 2, ...）ユニコードの表示
+                for (let col = 0; col < 16; col++) {
+                    const codePoint = start + (row * 16) + col;
+                    if (codePoint <= unicodeRangeEnd) {
+                        const td = document.createElement('td');
+                        const unicodeChar = String.fromCodePoint(codePoint);
+                        td.classList.add('unicode-item');
+                        td.textContent = unicodeChar;
+                        td.title = `U+${codePoint.toString(16).toUpperCase().padStart(6, '0')}`;
+                        td.addEventListener('click', () => copyToClipboard(unicodeChar));
+                        tr.appendChild(td);
+                    }
+                }
+
+                tbody.appendChild(tr);
+            }
+        }
+
+        // クリックでコピーする関数
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text)
+                .then(() => {
+                    lastCopiedText = text; // コピーされたテキストを保存
+                    showFloatingNotification(text); // コピーしたテキストを表示
+                })
+                .catch(err => console.error('コピー失敗:', err));
+        }
+
+        // コピー後に右上に通知を表示する関数
+        function showFloatingNotification(text) {
+            const notification = document.getElementById('floating-notification');
+            notification.textContent = `"${text}" コピーしました`; // コピーした文字を表示
+            notification.style.display = 'block';
+
+            // 通知を非表示にする
+            clearTimeout(window.notificationTimeout);
+            window.notificationTimeout = setTimeout(() => {
+                notification.style.display = 'none';
+            }, 2000); // 2秒後に通知を非表示
+        }
+
+        // 次へボタン
+        document.getElementById('next-button').addEventListener('click', () => {
+            if (currentStart + pageSize <= unicodeRangeEnd) {
+                currentStart += pageSize;
+                generateUnicodeTable(currentStart);
+            }
+        });
+
+        // 戻るボタン
+        document.getElementById('prev-button').addEventListener('click', () => {
+            if (currentStart - pageSize >= unicodeRangeStart) {
+                currentStart -= pageSize;
+                generateUnicodeTable(currentStart);
+            }
+        });
+
+        // 検索ボックスでEnterキーを押したとき
+        document.getElementById('search-box').addEventListener('keypress', (event) => {
+            if (event.key === 'Enter') {
+                const searchTerm = document.getElementById('search-box').value.toUpperCase();
+                const codePoint = parseInt(searchTerm.replace('U+', ''), 16);
+                if (!isNaN(codePoint) && codePoint >= unicodeRangeStart && codePoint <= unicodeRangeEnd) {
+                    // 検索キーワードに応じた範囲に移動
+                    const pageStart = Math.floor(codePoint / pageSize) * pageSize;
+                    currentStart = pageStart;
+                    generateUnicodeTable(currentStart);
+                    searchAndHighlight(codePoint);
+                }
+            }
+        });
+
+        // 検索してハイライトする関数
+        function searchAndHighlight(codePoint) {
+            const tbody = document.getElementById('unicode-table-body');
+            const rows = tbody.getElementsByTagName('tr');
+            let found = false;
+
+            for (let row of rows) {
+                const cells = row.getElementsByTagName('td');
+                for (let cell of cells) {
+                    const cellCodePoint = parseInt(cell.title.replace('U+', ''), 16);
+                    if (cellCodePoint === codePoint) {
+                        cell.classList.add('highlight');
+                        found = true;
+                    } else {
+                        cell.classList.remove('highlight');
+                    }
+                }
+            }
+
+            if (found) {
+                const targetRow = Math.floor((codePoint - currentStart) / 16);
+                const targetCol = (codePoint - currentStart) % 16;
+                document.getElementById('unicode-table-body').rows[targetRow].cells[targetCol].scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        }
+
+        // ページ読み込み時に最初のページを生成
+        generateUnicodeTable(currentStart);
+    </script>
+</body>
+</html>
